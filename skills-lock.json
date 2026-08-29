@@ -1,0 +1,17 @@
+{
+  "version": 1,
+  "skills": {
+    "PDF OCR Extraction": {
+      "source": "claude-office-skills/skills",
+      "sourceType": "github",
+      "skillPath": "pdf-ocr/SKILL.md",
+      "computedHash": "7ceb0313ff7671b126c7cb1ed17030384ce880d922de2ed989d8707077f56c1f"
+    },
+    "ocr-document-processor": {
+      "source": "dkyazzentwatwa/chatgpt-skills",
+      "sourceType": "github",
+      "skillPath": "ocr-document-processor/SKILL.md",
+      "computedHash": "34bae06e21db7af3a83920f81db623700362586b3361f313581d29f792eefd4f"
+    }
+  }
+}
