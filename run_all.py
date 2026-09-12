@@ -22,16 +22,41 @@ def run_pytest():
         print(result.stderr)
     return result.returncode == 0
 
-def test_api(url, method='GET', data=None):
+def test_api(url, method='GET', data=None, timeout=15):
     req = urllib.request.Request(url, method=method)
     req.add_header('Content-Type', 'application/json')
     body = json.dumps(data).encode('utf-8') if data else None
-    with urllib.request.urlopen(req, data=body) as res:
-        return res.status, json.loads(res.read().decode('utf-8'))
+    try:
+        with urllib.request.urlopen(req, data=body, timeout=timeout) as res:
+            return res.status, json.loads(res.read().decode('utf-8'))
+    except urllib.error.HTTPError as e:
+        try:
+            err_body = json.loads(e.read().decode('utf-8'))
+        except Exception:
+            err_body = {'error': f'HTTP {e.code}'}
+        print(f"  ! HTTP {e.code} on {method} {url} -> {err_body}")
+        raise
+    except urllib.error.URLError as e:
+        print(f"  ! Cannot reach server at {url}. Is `python run.py` running on {BASE_URL}? ({e.reason})")
+        raise SystemExit(1)
+
+def wait_for_server(retries=15, delay=2):
+    for i in range(retries):
+        try:
+            with urllib.request.urlopen(f"{BASE_URL}/health", timeout=5) as res:
+                if res.status == 200:
+                    return True
+        except Exception:
+            pass
+        print(f"  ... waiting for server {BASE_URL} ({i + 1}/{retries})")
+        time.sleep(delay)
+    print(f"  ! Server not reachable at {BASE_URL} after {retries * delay}s. Start it with `python run.py` first.")
+    raise SystemExit(1)
 
 def run_live_api_demonstration():
     print_banner(f"2. RUNNING LIVE API DEMONSTRATION ON {BASE_URL}")
     base_url = BASE_URL
+    wait_for_server()
 
     # Step 1: Health Check
     status, res = test_api(f"{base_url}/health")
@@ -121,33 +146,39 @@ def run_live_api_demonstration():
     for g in gst_data['gst_summary']:
         print(f"  GST {g['gst_percentage']:>4.1f}% Slab | Invoices: {g['invoice_count']:>2} | Taxable Subtotal: ${g['total_taxable_subtotal']:>9.2f} | GST Tax Collected: ${g['total_gst']:>8.2f}")
 
-    # Step 7: Sales Forecasting
+    # Step 7: Sales Forecasting (handles sparse-data gracefully)
     print("\n--- F. Machine Learning Sales Forecast (/api/forecast/sales?months=3) ---")
     _, fc = test_api(f"{base_url}/api/forecast/sales?months=3")
-    print(f"  Model Employed  : {fc['model_type']}")
-    print(f"  Trend Direction : {fc['trend_direction'].upper()} ({fc['slope_per_month']:+,.2f}/month)")
-    print(f"  Historical Base : {fc['historical_periods_used']} months")
-    print("  Projections:")
-    for item in fc['forecast']:
-        print(f"    * {item['period']} -> Projected: ${item['predicted_sales']:>9.2f}  (90% Conf: ${item['lower_bound']:>9.2f} to ${item['upper_bound']:>9.2f})")
+    if fc.get('status') == 'insufficient_data':
+        print(f"  ! Forecasting skipped: {fc.get('message')}")
+    else:
+        print(f"  Model Employed  : {fc['model_type']}")
+        print(f"  Trend Direction : {fc['trend_direction'].upper()} ({fc['slope_per_month']:+,.2f}/month)")
+        print(f"  Historical Base : {fc['historical_periods_used']} months")
+        print("  Projections:")
+        for item in fc['forecast']:
+            print(f"    * {item['period']} -> Projected: ${item['predicted_sales']:>9.2f}  (90% Conf: ${item['lower_bound']:>9.2f} to ${item['upper_bound']:>9.2f})")
 
-    # Step 8: Gemini AI Insights
+    # Step 8: Gemini AI Insights (handles no-data gracefully)
     print("\n--- G. Gemini AI Executive Insights (/api/ai/insights) ---")
     _, ai_res = test_api(f"{base_url}/api/ai/insights", 'POST')
-    insights = ai_res['insights']
-    print(f"  [EXECUTIVE SUMMARY]\n  {insights['executive_summary']}\n")
-    print("  [KEY OBSERVATIONS]")
-    for obs in insights['key_observations']:
-        print(f"   * {obs}")
-    print("\n  [IDENTIFIED BUSINESS RISKS]")
-    for risk in insights['business_risks']:
-        print(f"   ! {risk}")
-    print("\n  [GROWTH OPPORTUNITIES]")
-    for opp in insights['growth_opportunities']:
-        print(f"   + {opp}")
-    print("\n  [ACTIONABLE CFO RECOMMENDATIONS]")
-    for rec in insights['actionable_recommendations']:
-        print(f"   > {rec}")
+    if not ai_res.get('insights'):
+        print(f"  ! AI insights skipped: {ai_res.get('message', ai_res)}")
+    else:
+        insights = ai_res['insights']
+        print(f"  [EXECUTIVE SUMMARY]\n  {insights['executive_summary']}\n")
+        print("  [KEY OBSERVATIONS]")
+        for obs in insights['key_observations']:
+            print(f"   * {obs}")
+        print("\n  [IDENTIFIED BUSINESS RISKS]")
+        for risk in insights['business_risks']:
+            print(f"   ! {risk}")
+        print("\n  [GROWTH OPPORTUNITIES]")
+        for opp in insights['growth_opportunities']:
+            print(f"   + {opp}")
+        print("\n  [ACTIONABLE CFO RECOMMENDATIONS]")
+        for rec in insights['actionable_recommendations']:
+            print(f"   > {rec}")
 
     print_banner("ALL CHECKS & DEMONSTRATIONS COMPLETED SUCCESSFULLY")
 
@@ -155,3 +186,6 @@ if __name__ == '__main__':
     tests_ok = run_pytest()
     if tests_ok:
         run_live_api_demonstration()
+    else:
+        print("\n! Pytest failed — live demo skipped. Fix failing tests first.")
+        sys.exit(1)
