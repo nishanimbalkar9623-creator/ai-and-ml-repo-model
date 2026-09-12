@@ -1,11 +1,9 @@
-.env
 __pycache__/
-*.pyc
-*.pyo
-*.pyd
-.Python
+*.py[cod]
+.venv/
 venv/
 env/
+.env
 data/*.db
 *.sqlite
 *.sqlite3
@@ -14,5 +12,3 @@ data/*.db
 htmlcov/
 *.log
 .DS_Store
-*.swp
-*.swo
