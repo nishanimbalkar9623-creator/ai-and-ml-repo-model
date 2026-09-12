@@ -1,8 +1,12 @@
 import subprocess
 import sys
 import json
+import os
 import urllib.request
 import time
+
+BASE_PORT = int(os.getenv('PORT', '8002'))
+BASE_URL = f"http://127.0.0.1:{BASE_PORT}"
 
 def print_banner(title):
     print("\n" + "=" * 80)
@@ -26,8 +30,8 @@ def test_api(url, method='GET', data=None):
         return res.status, json.loads(res.read().decode('utf-8'))
 
 def run_live_api_demonstration():
-    print_banner("2. RUNNING LIVE API DEMONSTRATION ON http://127.0.0.1:5000")
-    base_url = "http://127.0.0.1:5000"
+    print_banner(f"2. RUNNING LIVE API DEMONSTRATION ON {BASE_URL}")
+    base_url = BASE_URL
 
     # Step 1: Health Check
     status, res = test_api(f"{base_url}/health")
