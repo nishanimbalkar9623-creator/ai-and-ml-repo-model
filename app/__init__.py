@@ -82,6 +82,7 @@ def create_app(test_config=None):
             'docs': '/health — GET server & DB health; /api/invoices, /api/analytics/*, /api/forecast/sales, /api/ai/insights',
             'endpoints': [
                 'GET /health',
+                'GET /api/health',
                 'POST /api/invoices',
                 'GET /api/invoices',
                 'GET /api/invoices/<id>',
@@ -96,6 +97,24 @@ def create_app(test_config=None):
                 'GET /api/forecast/sales?months=3',
                 'POST /api/ai/insights',
             ],
+        }), 200
+
+    GROQ_MODELS = [
+        "llama-3.3-70b-versatile",
+        "llama-3.1-8b-instant",
+        "llama-3.2-11b-vision-preview",
+        "llama-3.2-3b-preview",
+        "llama-3.2-1b-preview",
+        "mixtral-8x7b-32768",
+        "gemma2-9b-it"
+    ]
+
+    @app.route('/api/health')
+    def api_health():
+        return jsonify({
+            'status': 'online',
+            'provider': 'Groq',
+            'models': GROQ_MODELS
         }), 200
 
     @app.route('/health')

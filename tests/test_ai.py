@@ -4,6 +4,15 @@ from app.services.ai_service import AIService
 
 
 class TestAIInsightsAPI:
+    def test_api_health(self, client):
+        response = client.get('/api/health')
+        assert response.status_code == 200
+        data = response.get_json()
+        assert data['status'] == 'online'
+        assert data['provider'] == 'Groq'
+        assert isinstance(data['models'], list)
+        assert len(data['models']) > 0
+
     def test_ai_insights_no_data(self, client):
         response = client.post('/api/ai/insights')
         assert response.status_code == 200

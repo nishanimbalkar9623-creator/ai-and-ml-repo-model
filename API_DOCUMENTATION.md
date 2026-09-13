@@ -25,6 +25,27 @@ http://localhost:5000
 }
 ```
 
+### 1.2 Groq AI Health & Model Registry
+* **Method**: `GET`
+* **URL**: `/api/health`
+* **Description**: Returns the online status, AI provider, and list of supported Groq models.
+* **Response `200 OK`**:
+```json
+{
+  "status": "online",
+  "provider": "Groq",
+  "models": [
+    "llama-3.3-70b-versatile",
+    "llama-3.1-8b-instant",
+    "llama-3.2-11b-vision-preview",
+    "llama-3.2-3b-preview",
+    "llama-3.2-1b-preview",
+    "mixtral-8x7b-32768",
+    "gemma2-9b-it"
+  ]
+}
+```
+
 ---
 
 ## 2. Invoice Management (`/api/invoices`)
