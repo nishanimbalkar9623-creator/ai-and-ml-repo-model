@@ -83,7 +83,16 @@ class AIService:
                 response = model.generate_content(prompt)
                 raw_text = response.text.strip()
 
-            parsed_insights = json.loads(raw_text)
+            clean_text = raw_text.strip()
+            if clean_text.startswith("```"):
+                lines = clean_text.splitlines()
+                if lines[0].startswith("```"):
+                    lines = lines[1:]
+                if lines and lines[-1].startswith("```"):
+                    lines = lines[:-1]
+                clean_text = "\n".join(lines).strip()
+
+            parsed_insights = json.loads(clean_text)
 
             return {
                 'status': 'success',

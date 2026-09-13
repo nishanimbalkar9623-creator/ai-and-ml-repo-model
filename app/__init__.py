@@ -24,16 +24,18 @@ def create_app(test_config=None):
     default_sqlite_url = _sqlite_url(default_db_path)
 
     database_url = (os.getenv('DATABASE_URL', default_sqlite_url) or '').strip()
-    # Allow a plain relative sqlite path in .env too (sqlite:///data/invoice.db)
+    # Allow a plain relative sqlite path in .env too (sqlite:///data/invoice.db), and preserve :memory:
     if database_url.startswith('sqlite:'):
-        path_part = database_url[len('sqlite:'):]
-        while path_part.startswith('/'):
-            path_part = path_part[1:]
-        # strip query/fragment leftovers not expected here
-        if not os.path.isabs(path_part):
-            path_part = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), path_part)
-        database_url = _sqlite_url(path_part)
-    if database_url.startswith('postgres://'):
+        if ':memory:' in database_url:
+            database_url = 'sqlite:///:memory:'
+        else:
+            path_part = database_url[len('sqlite:'):]
+            while path_part.startswith('/'):
+                path_part = path_part[1:]
+            if not os.path.isabs(path_part) and not (len(path_part) >= 2 and path_part[1] == ':'):
+                path_part = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), path_part)
+            database_url = _sqlite_url(path_part)
+    elif database_url.startswith('postgres://'):
         database_url = database_url.replace('postgres://', 'postgresql://', 1)
 
     app.config['SQLALCHEMY_DATABASE_URI'] = database_url

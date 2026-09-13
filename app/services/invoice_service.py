@@ -46,24 +46,28 @@ class InvoiceService:
             profit=totals['profit']
         )
 
-        db.session.add(invoice)
-        db.session.flush()
+        try:
+            db.session.add(invoice)
+            db.session.flush()
 
-        for item_data in calculated_items:
-            item = InvoiceItem(
-                invoice_id=invoice.id,
-                product_name=str(item_data['product_name']).strip(),
-                quantity=int(item_data['quantity']),
-                purchase_price=float(item_data['purchase_price']),
-                selling_price=float(item_data['selling_price']),
-                item_subtotal=item_data['item_subtotal'],
-                item_cost=item_data['item_cost'],
-                item_profit=item_data['item_profit']
-            )
-            db.session.add(item)
+            for item_data in calculated_items:
+                item = InvoiceItem(
+                    invoice_id=invoice.id,
+                    product_name=str(item_data['product_name']).strip(),
+                    quantity=int(item_data['quantity']),
+                    purchase_price=float(item_data['purchase_price']),
+                    selling_price=float(item_data['selling_price']),
+                    item_subtotal=item_data['item_subtotal'],
+                    item_cost=item_data['item_cost'],
+                    item_profit=item_data['item_profit']
+                )
+                db.session.add(item)
 
-        db.session.commit()
-        return invoice
+            db.session.commit()
+            return invoice
+        except Exception:
+            db.session.rollback()
+            raise
 
     @staticmethod
     def get_invoice(invoice_id: int) -> Optional[Invoice]:
@@ -115,9 +119,6 @@ class InvoiceService:
         if errors:
             raise ValueError("; ".join(errors))
 
-        # Clear existing items
-        InvoiceItem.query.filter_by(invoice_id=invoice_id).delete()
-
         items_data = data['items']
         calculated_items = []
 
@@ -134,30 +135,38 @@ class InvoiceService:
 
         invoice_date = datetime.strptime(str(data['invoice_date']), '%Y-%m-%d').date()
 
-        invoice.customer_name = str(data['customer_name']).strip()
-        invoice.invoice_date = invoice_date
-        invoice.subtotal = totals['subtotal']
-        invoice.gst_percentage = gst_pct
-        invoice.gst_amount = totals['gst_amount']
-        invoice.total_amount = totals['total_amount']
-        invoice.total_cost = totals['total_cost']
-        invoice.profit = totals['profit']
+        try:
+            # Clear existing items safely via relationship collection
+            invoice.items.clear()
+            db.session.flush()
 
-        for item_data in calculated_items:
-            item = InvoiceItem(
-                invoice_id=invoice.id,
-                product_name=str(item_data['product_name']).strip(),
-                quantity=int(item_data['quantity']),
-                purchase_price=float(item_data['purchase_price']),
-                selling_price=float(item_data['selling_price']),
-                item_subtotal=item_data['item_subtotal'],
-                item_cost=item_data['item_cost'],
-                item_profit=item_data['item_profit']
-            )
-            db.session.add(item)
+            invoice.customer_name = str(data['customer_name']).strip()
+            invoice.invoice_date = invoice_date
+            invoice.subtotal = totals['subtotal']
+            invoice.gst_percentage = gst_pct
+            invoice.gst_amount = totals['gst_amount']
+            invoice.total_amount = totals['total_amount']
+            invoice.total_cost = totals['total_cost']
+            invoice.profit = totals['profit']
 
-        db.session.commit()
-        return invoice
+            for item_data in calculated_items:
+                item = InvoiceItem(
+                    invoice_id=invoice.id,
+                    product_name=str(item_data['product_name']).strip(),
+                    quantity=int(item_data['quantity']),
+                    purchase_price=float(item_data['purchase_price']),
+                    selling_price=float(item_data['selling_price']),
+                    item_subtotal=item_data['item_subtotal'],
+                    item_cost=item_data['item_cost'],
+                    item_profit=item_data['item_profit']
+                )
+                db.session.add(item)
+
+            db.session.commit()
+            return invoice
+        except Exception:
+            db.session.rollback()
+            raise
 
     @staticmethod
     def delete_invoice(invoice_id: int) -> bool:
@@ -168,6 +177,10 @@ class InvoiceService:
         if not invoice:
             return False
 
-        db.session.delete(invoice)
-        db.session.commit()
-        return True
+        try:
+            db.session.delete(invoice)
+            db.session.commit()
+            return True
+        except Exception:
+            db.session.rollback()
+            raise

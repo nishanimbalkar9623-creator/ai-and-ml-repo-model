@@ -1,4 +1,5 @@
 from flask import Blueprint, request, jsonify
+from app import db
 from app.services.invoice_service import InvoiceService
 
 invoice_bp = Blueprint('invoice', __name__)
@@ -17,8 +18,10 @@ def create_invoice():
             'invoice': invoice.to_dict()
         }), 201
     except ValueError as e:
+        db.session.rollback()
         return jsonify({'error': str(e)}), 400
     except Exception as e:
+        db.session.rollback()
         return jsonify({'error': f'Failed to create invoice: {str(e)}'}), 500
 
 
@@ -70,8 +73,10 @@ def update_invoice(invoice_id: int):
             'invoice': invoice.to_dict()
         }), 200
     except ValueError as e:
+        db.session.rollback()
         return jsonify({'error': str(e)}), 400
     except Exception as e:
+        db.session.rollback()
         return jsonify({'error': f'Failed to update invoice: {str(e)}'}), 500
 
 
@@ -83,4 +88,5 @@ def delete_invoice(invoice_id: int):
             return jsonify({'error': f'Invoice with ID {invoice_id} not found'}), 404
         return jsonify({'message': f'Invoice {invoice_id} deleted successfully'}), 200
     except Exception as e:
+        db.session.rollback()
         return jsonify({'error': f'Failed to delete invoice: {str(e)}'}), 500

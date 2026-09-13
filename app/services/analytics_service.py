@@ -139,6 +139,10 @@ class AnalyticsService:
         """
         Retrieve top products ranked by sales revenue.
         """
+        if not isinstance(limit, int) or limit < 1:
+            limit = 10
+        limit = min(limit, 100)
+
         results = db.session.query(
             InvoiceItem.product_name,
             func.sum(InvoiceItem.quantity).label('total_quantity'),
@@ -166,6 +170,10 @@ class AnalyticsService:
         """
         Retrieve products ranked by total net profit.
         """
+        if not isinstance(limit, int) or limit < 1:
+            limit = 10
+        limit = min(limit, 100)
+
         results = db.session.query(
             InvoiceItem.product_name,
             func.sum(InvoiceItem.quantity).label('total_quantity'),

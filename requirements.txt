@@ -10,4 +10,5 @@ google-genai
 gunicorn
 flask-cors
 pytest
+serverless-wsgi
 

@@ -8,8 +8,21 @@ def test_api(url, method='GET', data=None):
     req = urllib.request.Request(url, method=method)
     req.add_header('Content-Type', 'application/json')
     body = json.dumps(data).encode('utf-8') if data else None
-    with urllib.request.urlopen(req, data=body) as res:
-        return res.status, json.loads(res.read().decode('utf-8'))
+    try:
+        with urllib.request.urlopen(req, data=body, timeout=10) as res:
+            return res.status, json.loads(res.read().decode('utf-8'))
+    except urllib.error.HTTPError as e:
+        try:
+            err_body = json.loads(e.read().decode('utf-8'))
+        except Exception:
+            err_body = {'error': f'HTTP {e.code}'}
+        print(f"  ! HTTP Error {e.code} on {method} {url} -> {err_body}")
+        raise
+    except urllib.error.URLError as e:
+        print(f"\n  [ERROR] Cannot connect to server at {url}.")
+        print(f"  Please ensure the server is running (`python run.py`) on {BASE_URL}.")
+        print(f"  Details: {e.reason}\n")
+        raise SystemExit(1)
 
 print("=== 1. Health Check ===")
 status, res = test_api(f'{BASE_URL}/health')

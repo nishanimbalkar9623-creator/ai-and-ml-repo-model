@@ -21,7 +21,9 @@ services:
       - key: GEMINI_API_KEY
         sync: false
       - key: DATABASE_URL
-        sync: false
+        fromDatabase:
+          name: ai-ml2-db
+          property: connectionString
 
 databases:
   - name: ai-ml2-db
